@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:5000/api";
+const BASE_URL = "http://178.104.66.33/api";
 
 export const validateSingleEmail = async (email) => {
   const res = await fetch(`${BASE_URL}/validate`, {
