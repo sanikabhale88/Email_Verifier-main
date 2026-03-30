@@ -23,7 +23,7 @@ export default function FindEmail() {
     try {
       const token = localStorage.getItem("efy_token");
 
-      const res = await fetch("http://178.104.66.33/api/find-email", {
+      const res = await fetch("/api/find-email", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

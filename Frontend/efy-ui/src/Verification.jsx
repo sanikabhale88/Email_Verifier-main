@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./Login.css";
 
-const API_BASE_URL = "http://178.104.66.33/api";
+const API_BASE_URL = "/api";
 
 function Verification() {
   const navigate = useNavigate();

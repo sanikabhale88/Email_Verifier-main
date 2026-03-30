@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import { FaLock } from "react-icons/fa";
 
-const API_BASE_URL = "http://178.104.66.33/api";
+const API_BASE_URL = "/api";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
