@@ -77,11 +77,25 @@ function smtpCheck(email, mxHost) {
       }
     };
 
-    socket.on("data", (data) => {
-      const msg = data.toString();
-      console.log("SMTP Response:", msg); // 🔥 debug log
+    let buffer = "";
 
-      const codeMatch = msg.match(/^(\d{3})/);
+    socket.on("data", (data) => {
+      buffer += data.toString();
+      
+      // Wait until we receive a full line ending with \r\n
+      if (!buffer.endsWith("\r\n")) return;
+      
+      // Extract the last non-empty line of the response
+      const lines = buffer.trim().split("\r\n");
+      const msg = lines[lines.length - 1]; // e.g. "250 OK" or "250-SIZE..."
+      buffer = "";
+
+      console.log("SMTP Response (Last Line):", msg); // 🔥 debug log
+
+      // Ensure we only process if this is the final line of a multiline response
+      // Multiline responses use "250-", the final line uses "250 " (with a space)
+      const codeMatch = msg.match(/^(\d{3})(?: |$)/);
+      if (!codeMatch) return; // Wait for the final line of the response to arrive
 
       // Step 1: Greeting
       if (step === 0 && msg.startsWith("220")) {

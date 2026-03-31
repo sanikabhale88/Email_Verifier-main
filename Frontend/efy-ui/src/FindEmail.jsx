@@ -23,7 +23,8 @@ export default function FindEmail() {
     try {
       const token = localStorage.getItem("efy_token");
 
-      const res = await fetch("/api/find-email", {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || "http://178.104.66.33:5000/api";
+      const res = await fetch(`${API_BASE_URL}/find-email`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

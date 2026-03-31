@@ -204,6 +204,7 @@ function AppStoreIcon() {
 // Encodes standard OTP-Auth URI for Google Authenticator
 // ══════════════════════════════════════════════════
 const SECRET   = "LGJIRKYPJIZLGB3";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://178.104.66.33:5000/api";
 const OTP_URI  = `otpauth://totp/E-fy:kamlesh%40sphurti.net?secret=${SECRET}&issuer=E-fy`;
 const QR_URL   = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&margin=8&data=${encodeURIComponent(OTP_URI)}`;
 

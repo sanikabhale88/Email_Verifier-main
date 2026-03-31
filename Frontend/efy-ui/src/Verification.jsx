@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./Login.css";
 
-const API_BASE_URL = "/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://178.104.66.33:5000/api";
 
 function Verification() {
   const navigate = useNavigate();

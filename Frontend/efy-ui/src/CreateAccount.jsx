@@ -5,7 +5,7 @@ import { FcGoogle } from "react-icons/fc";
 import { FaEnvelope, FaLock, FaUser } from "react-icons/fa";
 
 // Backend API base URL
-const API_BASE_URL = "/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://178.104.66.33:5000/api";
 
 function CreateAccount() {
   const navigate = useNavigate();

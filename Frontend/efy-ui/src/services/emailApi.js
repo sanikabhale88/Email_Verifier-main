@@ -1,4 +1,4 @@
-const BASE_URL = "/api";
+const BASE_URL = import.meta.env.VITE_API_URL || "http://178.104.66.33:5000/api";
 
 export const validateSingleEmail = async (email) => {
   const res = await fetch(`${BASE_URL}/validate`, {
