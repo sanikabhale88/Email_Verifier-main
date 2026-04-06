@@ -10,6 +10,8 @@ const fs = require("fs");
 
 // DB Connection
 const connectDB = require("./config/db");
+const authMiddleware = require("./middleware/authMiddleware");
+const User = require("./models/User");
 
 // Email Validation Helpers
 const { checkSyntax } = require("./validators/syntax");
@@ -243,10 +245,18 @@ async function validateOne(email) {
 /* ----------------------------------------------------
    API ROUTES
 ---------------------------------------------------- */
-app.post("/api/validate", async (req, res) => {
+app.post("/api/validate", authMiddleware, async (req, res) => {
   try {
+    const user = await User.findById(req.user.id || req.user._id);
+    if (!user || user.credits < 1) {
+      return res.status(403).json({ error: "Insufficient credits" });
+    }
+
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: "Email is required" });
+
+    user.credits -= 1;
+    await user.save();
 
     const result = await validateOne(email);
     res.json(result);
@@ -255,12 +265,20 @@ app.post("/api/validate", async (req, res) => {
   }
 });
 
-app.post("/api/validate/multiple", async (req, res) => {
+app.post("/api/validate/multiple", authMiddleware, async (req, res) => {
   const { emails } = req.body;
   if (!Array.isArray(emails))
     return res.status(400).json({ error: "emails must be an array" });
 
   try {
+    const user = await User.findById(req.user.id || req.user._id);
+    if (!user || user.credits < emails.length) {
+      return res.status(403).json({ error: "Insufficient credits" });
+    }
+
+    user.credits -= emails.length;
+    await user.save();
+
     await prefetchMx(emails);
     const results = await Promise.all(emails.map(validateOne));
     res.json({ total: results.length, results });

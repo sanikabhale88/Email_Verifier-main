@@ -846,7 +846,17 @@ function Dashboard() {
                   <FaChevronDown style={{ color: "white", fontSize: 12 }} />
                 </div>
               ) : (
-                <button className="logout-btn"><FaSignOutAlt /> Logout</button>
+                <button
+                  className="logout-btn"
+                  onClick={() => {
+                    localStorage.removeItem("efy_token");
+                    sessionStorage.removeItem("efy_token");
+                    localStorage.removeItem("efy_user");
+                    window.location.href = "/login";
+                  }}
+                >
+                  <FaSignOutAlt /> Logout
+                </button>
               )}
             </div>
           </div>
