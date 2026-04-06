@@ -675,7 +675,33 @@ function Dashboard() {
   const [showTable,        setShowTable]        = useState(false);
 
   // Credits
-  const [credits, setCredits] = useState(100000);
+  const [credits, setCredits] = useState(0);
+  const [user, setUser] = useState({ name: "User", email: "" });
+
+  React.useEffect(() => {
+    const storedUser = localStorage.getItem("efy_user");
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error("Error parsing user data");
+      }
+    }
+
+    const token = localStorage.getItem("efy_token") || sessionStorage.getItem("efy_token");
+    if (token) {
+      fetch(`${Math.abs(1) ? (import.meta.env.VITE_API_URL || "http://178.104.66.33:5000/api") : ""}/user/credits`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && typeof data.credits !== "undefined") {
+          setCredits(data.credits);
+        }
+      })
+      .catch(err => console.error("Error fetching credits", err));
+    }
+  }, []);
 
   // Billing page
   const [showBillingPage, setShowBillingPage] = useState(false);
@@ -765,7 +791,7 @@ function Dashboard() {
 
       {showBillingPage ? (
         <CreditBillingPage
-          credits={credits} userName="Kamlesh Surana" userEmail="kamlesh@sphurti.net"
+          credits={credits} userName={user?.name || "User"} userEmail={user?.email || ""}
           onClose={() => setShowBillingPage(false)}
           onBuyCredits={() => { setCredits(prev => prev + 100); setShowBillingPage(false); }}
         />
@@ -774,7 +800,7 @@ function Dashboard() {
           <div className="logo-container"><h2 className="logo">E-fy</h2></div>
           <div className="user-profile">
             <div className="avatar"><FaUser /></div>
-            <div className="user-info"><h4>Kamlesh Surana</h4></div>
+            <div className="user-info"><h4>{user?.name || "User"}</h4></div>
           </div>
           <div className="menu">
             {[
@@ -807,7 +833,7 @@ function Dashboard() {
         <div className="main">
           <div className={`header ${activeMenu === "credits" ? "header-credits" : ""}`}>
             <div className="header-left">
-              {activeMenu !== "credits" && <h2>Welcome back, Kamlesh!</h2>}
+              {activeMenu !== "credits" && <h2>Welcome back, {(user?.name && user.name.split(" ")[0]) || "User"}!</h2>}
             </div>
             <div className="header-right">
               {activeMenu !== "credits" && (
@@ -816,7 +842,7 @@ function Dashboard() {
               {activeMenu === "credits" ? (
                 <div className="cb-header-user">
                   <div className="cb-header-avatar"><FaUser /></div>
-                  <span className="cb-header-name">Kamlesh Surana</span>
+                  <span className="cb-header-name">{user?.name || "User"}</span>
                   <FaChevronDown style={{ color: "white", fontSize: 12 }} />
                 </div>
               ) : (
@@ -827,7 +853,7 @@ function Dashboard() {
 
           {activeMenu === "credits" && (
             <Creditbalancepage
-              credits={credits} userName="Kamlesh Surana" userEmail="kamlesh@sphurti.net"
+              credits={credits} userName={user?.name || "User"} userEmail={user?.email || ""}
               onBuyCredits={() => setShowBillingPage(true)}
             />
           )}
