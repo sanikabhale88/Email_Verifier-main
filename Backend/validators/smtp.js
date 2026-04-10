@@ -1,5 +1,6 @@
 const dns = require("dns");
 const net = require("net");
+const { createProxySocket } = require("../utils/proxy");
 
 // ── Use fast DNS servers ──
 dns.setServers(["1.1.1.1", "8.8.8.8"]);
@@ -54,81 +55,81 @@ const classifyBounce = (code) => {
 };
 
 // ── SMTP check ──
-function smtpCheck(email, mxHost) {
-  return new Promise((resolve) => {
-    const socket = net.createConnection(25, mxHost);
+async function smtpCheck(email, mxHost) {
+  try {
+    // 🔥 create socket via SOCKS5 proxy
+    const socket = await createProxySocket(mxHost);
     socket.setTimeout(20000);
 
-    let step = 0;
-    let resolved = false;
+    return new Promise((resolve) => {
+      let step = 0;
+      let resolved = false;
 
-    let finalResult = {
-      smtp: false,
-      code: "Unknown",
-      bounceType: "Unknown",
-      reason: "Unknown error",
-    };
+      let finalResult = {
+        smtp: false,
+        code: "Unknown",
+        bounceType: "Unknown",
+        reason: "Unknown error",
+      };
 
-    const done = (result) => {
-      if (!resolved) {
-        resolved = true;
-        socket.destroy();
-        resolve(result);
-      }
-    };
+      const done = (result) => {
+        if (!resolved) {
+          resolved = true;
+          socket.destroy();
+          resolve(result);
+        }
+      };
 
-    let buffer = "";
+      let buffer = "";
 
-    socket.on("data", (data) => {
-      buffer += data.toString();
-      
-      // Wait until we receive a full line ending with \r\n
-      if (!buffer.endsWith("\r\n")) return;
-      
-      // Extract the last non-empty line of the response
-      const lines = buffer.trim().split("\r\n");
-      const msg = lines[lines.length - 1]; // e.g. "250 OK" or "250-SIZE..."
-      buffer = "";
+      socket.on("data", (data) => {
+        buffer += data.toString();
 
-      console.log("SMTP Response (Last Line):", msg); // 🔥 debug log
+        if (!buffer.endsWith("\r\n")) return;
 
-      // Ensure we only process if this is the final line of a multiline response
-      // Multiline responses use "250-", the final line uses "250 " (with a space)
-      const codeMatch = msg.match(/^(\d{3})(?: |$)/);
-      if (!codeMatch) return; // Wait for the final line of the response to arrive
+        const lines = buffer.trim().split("\r\n");
+        const msg = lines[lines.length - 1];
+        buffer = "";
 
-      // Step 1: Greeting
-      if (step === 0 && msg.startsWith("220")) {
-        socket.write("EHLO yourdomain.com\r\n");
-        step++;
-        return;
-      }
+        console.log("SMTP Response:", msg);
 
-      // Step 2: MAIL FROM
-      if (step === 1 && msg.startsWith("250")) {
-        socket.write("MAIL FROM:<verify@yourdomain.com>\r\n");
-        step++;
-        return;
-      }
+        const codeMatch = msg.match(/^(\d{3})(?: |$)/);
+        if (!codeMatch) return;
 
-      // Step 3: RCPT TO
-      if (step === 2 && msg.startsWith("250")) {
-        socket.write(`RCPT TO:<${email}>\r\n`);
-        step++;
-        return;
-      }
+        // Step 1: Greeting
+        if (step === 0 && msg.startsWith("220")) {
+          socket.write("EHLO yourdomain.com\r\n");
+          step++;
+          return;
+        }
 
-      // Step 4: Final response
-      if (step === 3) {
-        if (codeMatch) {
+        // Step 2: MAIL FROM
+        if (step === 1 && msg.startsWith("250")) {
+          socket.write("MAIL FROM:<verify@yourdomain.com>\r\n");
+          step++;
+          return;
+        }
+
+        // Step 3: RCPT TO
+        if (step === 2 && msg.startsWith("250")) {
+          socket.write(`RCPT TO:<${email}>\r\n`);
+          step++;
+          return;
+        }
+
+        // Step 4: Final response
+        if (step === 3) {
           const code = codeMatch[1];
           const bounceType = classifyBounce(code);
 
           if (code.startsWith("250")) {
-            finalResult = { smtp: true, code, bounceType: "None", reason: "OK" };
-          }
-          // ✅ Greylisting / temp accept → treat as valid
-          else if (
+            finalResult = {
+              smtp: true,
+              code,
+              bounceType: "None",
+              reason: "OK",
+            };
+          } else if (
             code.startsWith("451") ||
             code.startsWith("421") ||
             code.startsWith("450")
@@ -147,31 +148,40 @@ function smtpCheck(email, mxHost) {
               reason: msg.trim(),
             };
           }
+
+          socket.end();
         }
-        socket.end();
-      }
+      });
+
+      socket.on("timeout", () =>
+        done({
+          smtp: false,
+          code: "Timeout",
+          bounceType: "Soft",
+          reason: "SMTP connection timeout",
+        })
+      );
+
+      socket.on("error", (err) =>
+        done({
+          smtp: false,
+          code: "Connection Error",
+          bounceType: "Soft",
+          reason: err.message || "SMTP connection error",
+        })
+      );
+
+      socket.on("close", () => done(finalResult));
     });
 
-    socket.on("timeout", () =>
-      done({
-        smtp: false,
-        code: "Timeout",
-        bounceType: "Soft",
-        reason: "SMTP connection timeout",
-      })
-    );
-
-    socket.on("error", () =>
-      done({
-        smtp: false,
-        code: "Connection Error",
-        bounceType: "Soft",
-        reason: "SMTP connection error",
-      })
-    );
-
-    socket.on("close", () => done(finalResult));
-  });
+  } catch (err) {
+    return {
+      smtp: false,
+      code: "Proxy Error",
+      bounceType: "Soft",
+      reason: err.message || "SOCKS proxy connection failed",
+    };
+  }
 }
 
 // ── Main function ──

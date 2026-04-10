@@ -1,5 +1,5 @@
 const dns = require("dns");
-const net = require("net");
+const { createProxySocket } = require("../utils/proxy");
 
 // Generate random email ID
 function randomEmail(domain) {
@@ -7,37 +7,66 @@ function randomEmail(domain) {
   return `${random}@${domain}`;
 }
 
-function smtpCheck(email, host) {
+async function smtpCheck(email, host) {
+  let socket;
+  try {
+    socket = await createProxySocket(host);
+    socket.setTimeout(20000);
+  } catch (err) {
+    console.error("CatchAll proxy error:", err.message);
+    return false; // Connection/proxy error
+  }
+
   return new Promise((resolve) => {
-    const socket = net.createConnection(25, host);
     let step = 0;
+    let resolved = false;
+
+    const done = (result) => {
+      if (!resolved) {
+        resolved = true;
+        try {
+          socket.end();
+          socket.destroy();
+        } catch (e) {}
+        resolve(result);
+      }
+    };
+
+    let buffer = "";
 
     socket.on("data", (data) => {
-      const msg = data.toString();
+      buffer += data.toString();
+
+      if (!buffer.endsWith("\r\n")) return;
+
+      const lines = buffer.trim().split("\r\n");
+      const msg = lines[lines.length - 1];
+      buffer = "";
 
       if (step === 0 && msg.startsWith("220")) {
-        socket.write("HELO test.com\r\n");
+        socket.write("EHLO testdomain.com\r\n");
         step++;
       } 
       else if (step === 1 && msg.startsWith("250")) {
-        socket.write("MAIL FROM:<check@test.com>\r\n");
+        socket.write("MAIL FROM:<verify@testdomain.com>\r\n");
         step++;
       } 
-      else if (step === 2 && msg.includes("250")) {
+      else if (step === 2 && msg.startsWith("250")) {
         socket.write(`RCPT TO:<${email}>\r\n`);
         step++;
       } 
       else if (step === 3) {
         if (msg.startsWith("250")) {
-          resolve(true);   // server accepts email
+          done(true);   // Server accepts email
         } else {
-          resolve(false);  // rejected
+          done(false);  // Rejected
         }
-        socket.end();
       }
     });
 
-    socket.on("error", () => resolve(false));
+    socket.on("error", () => done(false));
+    socket.on("timeout", () => done(false));
+    socket.on("close", () => done(false));
   });
 }
 
