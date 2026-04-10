@@ -15,13 +15,13 @@ const proxyPorts = [
  * @param {number} destinationPort - The port to connect to on the destination (default: 25)
  * @returns {Promise<import("net").Socket>}
  */
-async function createProxySocket(destinationHost, destinationPort = 25) {
+async function createProxySocket(destinationHost, destinationPort = 25, forcePort = null) {
   // If no env credentials are provided, fallback to hardcoded ones found in the project.
   const proxyUserId = USERNAME || "spr1if7d1e";
   const proxyPassword = PASSWORD || "1y9de22sZumruJVyQ~";
 
   // Pick a random proxy port to rotate IPs
-  const randomPort = proxyPorts[Math.floor(Math.random() * proxyPorts.length)];
+  const randomPort = forcePort || proxyPorts[Math.floor(Math.random() * proxyPorts.length)];
 
   const info = await SocksClient.createConnection({
     proxy: {
