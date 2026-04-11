@@ -113,7 +113,7 @@ function getDomainColor(domain) {
   return colors[Math.abs(hash) % colors.length];
 }
 
-function FindEmail({ credits: initialCredits = 100, onLogout }) {
+function FindEmail({ credits: initialCredits = 1000000, onLogout }) {
   const navigate = useNavigate();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");

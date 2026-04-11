@@ -37,7 +37,7 @@ function WelcomeModal({ name }) {
 
         <div className="modal-credits">
           <span className="credits-get">Get </span>
-          <span className="credits-number">100</span>
+          <span className="credits-number">1,000,000</span>
           <span className="credits-free">Free</span>
           <span className="credits-label"> Credits</span>
         </div>

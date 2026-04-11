@@ -1605,7 +1605,7 @@ export default function App() {
               </MagneticButton>
 
               <p className="text-center text-xs text-[#4a5f74] mt-3 font-medium">
-                Includes 100 free credits
+                Includes 1,000,000 free credits
               </p>
 
               <div className="w-full mt-6">
