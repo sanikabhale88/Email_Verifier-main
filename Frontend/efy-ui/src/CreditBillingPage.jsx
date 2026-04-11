@@ -466,7 +466,7 @@ function BillingDetailsModal({ onClose, onConfirm }) {
 
 // ── Main CreditBillingPage Component ──
 export default function CreditBillingPage({
-  credits = 100,
+  credits = 1000000,
   userName = "Shravani Achari",
   onBuyCredits,
   onClose,

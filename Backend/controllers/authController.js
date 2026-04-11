@@ -97,7 +97,7 @@ exports.verifyOtpAndCreateUser = async (req, res) => {
       name,
       email,
       password,
-      credits: 100,
+      credits: 1000000,
       isVerified: true,   // ⭐ IMPORTANT — this fixes login issue
     });
 
