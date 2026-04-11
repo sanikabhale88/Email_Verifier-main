@@ -57,8 +57,8 @@ const classifyBounce = (code) => {
 // ── SMTP check ──
 async function smtpCheck(email, mxHost) {
   try {
-    // 🔥 create socket via SOCKS5 proxy
-    const socket = await createProxySocket(mxHost);
+    // 🔥 create socket via direct connection (bypass proxy to fix port 25 blocked)
+    const socket = net.createConnection(25, mxHost);
     socket.setTimeout(20000);
 
     return new Promise((resolve) => {
