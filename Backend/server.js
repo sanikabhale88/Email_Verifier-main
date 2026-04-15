@@ -109,11 +109,7 @@ function buildResult({
     score,
 
     // ✅ IMPROVED DELIVERABLE LOGIC
-    deliverable:
-      (smtpInfo.smtp ||
-        smtpInfo.code === "Timeout" ||
-        smtpInfo.code === "Connection Error") &&
-      !disposable,
+    deliverable: smtpInfo.smtp && !disposable,
 
     reason:
       smtpInfo.reason ||
