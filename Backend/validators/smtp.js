@@ -238,9 +238,10 @@ exports.checkSMTP = async (email) => {
   });
 
   for (const res of results) {
-    if (res.smtp) {
+    // Only count as valid if it's a genuine 250 OK (smtp: true and bounceType: None)
+    if (res.smtp && res.bounceType === "None") {
       validVotes++;
-    } else if (res.bounceType === "Hard") {
+    } else if (res.bounceType === "Hard") { // Hard bounces (5xx) mean invalid email
       invalidVotes++;
     }
     // Soft/Unknown bounces are ignored
@@ -253,7 +254,7 @@ exports.checkSMTP = async (email) => {
     finalResult = await smtpCheck(email, mxHost, null);
   } else if (validVotes > invalidVotes) {
     // Pick the first valid result to return
-    finalResult = results.find(r => r.smtp) || results[0];
+    finalResult = results.find(r => r.smtp && r.bounceType === "None") || results[0];
   } else if (invalidVotes > validVotes) {
     // Pick the first invalid result
     finalResult = results.find(r => !r.smtp && r.bounceType === "Hard") || results[0];
