@@ -1,6 +1,6 @@
 const dns = require("dns");
 const net = require("net");
-const { createProxySocket } = require("../utils/proxy");
+const { createProxySocket, proxyPorts } = require("../utils/proxy");
 
 // ── Use fast DNS servers ──
 dns.setServers(["1.1.1.1", "8.8.8.8"]);
@@ -55,10 +55,14 @@ const classifyBounce = (code) => {
 };
 
 // ── SMTP check ──
-async function smtpCheck(email, mxHost) {
+async function smtpCheck(email, mxHost, proxyPort = null) {
   try {
-    // 🔥 create socket via direct connection (bypass proxy to fix port 25 blocked)
-    const socket = net.createConnection(25, mxHost);
+    let socket;
+    if (proxyPort) {
+      socket = await createProxySocket(mxHost, 25, proxyPort);
+    } else {
+      socket = net.createConnection(25, mxHost);
+    }
     socket.setTimeout(20000);
 
     return new Promise((resolve) => {
@@ -222,7 +226,43 @@ exports.checkSMTP = async (email) => {
     return result;
   }
 
-  const result = await smtpCheck(email, mxHost);
-  smtpCache.set(email, result);
-  return result;
+  // Run majority voting over proxies
+  let validVotes = 0;
+  let invalidVotes = 0;
+  
+  const proxyPromises = proxyPorts.map(port => smtpCheck(email, mxHost, port));
+  const proxyResults = await Promise.allSettled(proxyPromises);
+  
+  const results = proxyResults.map(p => p.status === 'fulfilled' ? p.value : {
+    smtp: false, bounceType: "Soft", code: "Error", reason: "Proxy failed"
+  });
+
+  for (const res of results) {
+    if (res.smtp) {
+      validVotes++;
+    } else if (res.bounceType === "Hard") {
+      invalidVotes++;
+    }
+    // Soft/Unknown bounces are ignored
+  }
+
+  let finalResult;
+  if (validVotes === 0 && invalidVotes === 0) {
+    // Fallback to direct connection
+    console.log(`[${email}] All proxies soft-bounced/failed. Falling back to direct connection.`);
+    finalResult = await smtpCheck(email, mxHost, null);
+  } else if (validVotes > invalidVotes) {
+    // Pick the first valid result to return
+    finalResult = results.find(r => r.smtp) || results[0];
+  } else if (invalidVotes > validVotes) {
+    // Pick the first invalid result
+    finalResult = results.find(r => !r.smtp && r.bounceType === "Hard") || results[0];
+  } else {
+    // Tie case
+    console.log(`[${email}] Voting tie (Valid: ${validVotes}, Invalid: ${invalidVotes}). Yielding to direct connection.`);
+    finalResult = await smtpCheck(email, mxHost, null);
+  }
+
+  smtpCache.set(email, finalResult);
+  return finalResult;
 };

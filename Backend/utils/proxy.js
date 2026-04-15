@@ -43,5 +43,6 @@ async function createProxySocket(destinationHost, destinationPort = 25, forcePor
 }
 
 module.exports = {
-  createProxySocket
+  createProxySocket,
+  proxyPorts
 };
